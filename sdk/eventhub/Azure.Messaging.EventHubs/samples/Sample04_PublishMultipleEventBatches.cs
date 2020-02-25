@@ -81,7 +81,7 @@ namespace Azure.Messaging.EventHubs.Samples
                 {
                     using (EventDataBatch eventBatch = await producerClient.CreateBatchAsync())
                     {
-                        while ((TryDequeue(eventsToPublish, out EventData currentEvent)) && (eventBatch.TryAdd(currentEvent)))
+                        while (TryAdd(eventsToPublish, eventBatch))
                         {
                         }
 
@@ -111,25 +111,31 @@ namespace Azure.Messaging.EventHubs.Samples
         }
 
         /// <summary>
-        ///   Attempts to dequeue an event from the specified <paramref name="queue"/>.
+        ///   Attempts to dequeue an event from the specified <paramref name="queue"/> and add it to the specified <paramref name="eventBatch"/>.
         /// </summary>
         ///
         /// <param name="queue">The queue to attempt to dequeue from.</param>
-        /// <param name="currentEvent">The current event that was dequeued, or <c>null</c> if no event was available.</param>
+        /// <param name="eventBatch">The batch to attempt to add the event to.</param>
         ///
-        /// <returns><c>true</c> if an event was dequeued; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if an event was dequeued and added to the batch; otherwise, <c>false</c>.</returns>
         ///
-        private static bool TryDequeue(Queue<EventData> queue,
-                                       out EventData currentEvent)
+        private static bool TryAdd(Queue<EventData> queue,
+                                   EventDataBatch eventBatch)
         {
-            if (queue.Count > 0)
+            if (queue.Count == 0)
             {
-                currentEvent = queue.Dequeue();
-                return true;
+                return false;
             }
 
-            currentEvent = null;
-            return false;
+            var currentEvent = queue.Peek();
+
+            if (!eventBatch.TryAdd(currentEvent))
+            {
+                return false;
+            }
+
+            queue.Dequeue();
+            return true;
         }
     }
 }
